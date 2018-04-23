@@ -210,9 +210,10 @@ def create_letters(font):
 @click.option('--fullscreen', is_flag=True)
 @click.option('--fps', is_flag=True)
 @click.option('--size')
+@click.option('--threshold', type=float)
 @click.option('--picfile', default=os.path.join(os.path.dirname(__file__), 'trump800.jpg'))
 @click.option('--printer-mac', default="C4:30:18:35:13:FA")
-def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None):
+def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None, threshold=0.15):
     print('- Picfile: %s' % picfile)
     assert os.path.exists(picfile)
 
@@ -260,8 +261,8 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None)
             return
 
         r = random.random()
-        print(r)
-        if r > 0.8:
+        print('Dice is ', r, 'threshold is', threshold)
+        if r < threshold:
            target = 'G'
            sendprint()
         else:
