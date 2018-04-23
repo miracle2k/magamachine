@@ -104,6 +104,8 @@ class SlotMachine(object):
         self.reels = []
         self.speed = speed
 
+        self.on_spin_end = None
+
     @property
     def num_reels(self):
         return len(self.reels)
@@ -158,17 +160,15 @@ class SlotMachine(object):
         total_slots_to_spin = []
         for idx, d in enumerate(durations):
             by_speed = self.speed * d
-            extra_to_target = self.reels[idx].count_from_to(self.reels[idx].position + by_speed, self.targets[idx])
-            # print('now', self.reels[idx].position)
-            # print('after speed', self.reels[idx].norm_idx(self.reels[idx].position + by_speed))
-            # print('desired', self.targets[idx])
-            # print('extra', extra_to_target)
+            extra_to_target = self.reels[idx].count_from_to(self.reels[idx].position + by_speed, self.targets[idx])            
 
             total_slots_to_spin.append(by_speed + extra_to_target)
-        print(total_slots_to_spin)
+        
         self.desired_spin_distances = total_slots_to_spin    
 
     def update(self, time):
+        was_spinning = this.is_spinning
+
         for idx, reel in enumerate(self.reels):
             max_allowed = self.desired_spin_distances[idx]
             to_spin = min(max_allowed, self.speed * time)
@@ -177,6 +177,10 @@ class SlotMachine(object):
 
             reel.position = reel.norm_idx(reel.position)
             self.desired_spin_distances[idx] -= to_spin
+
+        if was_spinning and not self.is_spinning:
+            if self.on_spin_end:
+                self.on_spin_end()
 
     def draw(self, target):
         self.surface.fill((255,255,255))
@@ -247,13 +251,18 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     machine.set_to('#MAGA')
     machine.layout(background.get_rect())
 
+    def handle_spin_end():
+        print('Spinning is done.')
+        buttons.set_led(True)
+    machine.on_spin_end = handle_spin_end
+
     def sendprint():
         if not printer_mac:
             print('Skip printing, no mac')
             return
 
+        print('Printing...')
         pp = subprocess.Popen(["obexftp", "--nopath", "--noconn", "--uuid", "none", "--bluetooth", printer_mac,  "--channel", "4", "-p", picfile])
-        #message =  pp.communicate()
 
     def spin():
         if machine.is_spinning:
@@ -268,10 +277,12 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         else:
             target = random.random()
 
+        buttons.set_led(False)
         machine.spin_to(
-                        ['#', 'M', 'A', target, 'A'],
-                        [4,   5.5,    7,  10,      8]
-                    )
+            ['#', 'M', 'A', target, 'A'],
+            [4,   5.5,    7,  10,      8]
+        )
+
 
     # Event loop
     clock = pygame.time.Clock()
