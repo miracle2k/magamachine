@@ -1,7 +1,10 @@
 import click
+import subprocess
 import pygame
+import button
 import math
 import random
+import os
 import itertools
 from pygame.locals import *
 
@@ -115,7 +118,7 @@ class SlotMachine(object):
             symbols=symbols))
 
     def layout(self, screen_rect):
-        machine_height = self.symbol_height * 2
+        machine_height = self.symbol_height * 1
         machine_width = self.symbol_width * self.num_reels
         
         # Center the slot machine in the frame
@@ -205,24 +208,34 @@ def create_letters(font):
 
 @click.command()
 @click.option('--fullscreen', is_flag=True)
-def main(fullscreen=False):
+@click.option('--fps', is_flag=True)
+@click.option('--size')
+@click.option('--picfile', default=os.path.join(os.path.dirname(__file__), 'trump800.jpg'))
+@click.option('--printer-mac', default="C4:30:18:35:13:FA")
+def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None):
+    print('- Picfile: %s' % picfile)
+    assert os.path.exists(picfile)
+
     # Initialise screen
     pygame.init()
     flags = 0
     if fullscreen:
         flags |= pygame.FULLSCREEN
-    screen = pygame.display.set_mode((800, 640), flags)
+    pygame.mouse.set_visible(False)
+    screen = pygame.display.set_mode((1920, 1080), flags)
     pygame.display.set_caption('#MAGA Machine')
 
     # Fill background
     background = pygame.Surface(screen.get_size())
     background = background.convert()
-    background.fill((250, 250, 250))    
+    background.fill((255, 255, 255))    
     
-    font = pygame.font.Font("./bender_bold.ttf", 90)
+    font = pygame.font.Font("./bender_bold.ttf", size or 220)
     fontSmall = pygame.font.Font(None, 13)
 
     symbol_width, symbol_height = create_letters(font)
+    padding = 0.1
+    symbol_width = int(symbol_width + padding * symbol_width)
 
     machine = SlotMachine(symbol_height, symbol_width)
     machine.add_reel(symbols=LETTERS + ['#'])
@@ -233,6 +246,32 @@ def main(fullscreen=False):
     machine.set_to('#MAGA')
     machine.layout(background.get_rect())
 
+    def sendprint():
+        if not printer_mac:
+            print('Skip printing, no mac')
+            return
+
+        pp = subprocess.Popen(["obexftp", "--nopath", "--noconn", "--uuid", "none", "--bluetooth", printer_mac,  "--channel", "4", "-p", picfile])
+        #message =  pp.communicate()
+
+    def spin():
+        if machine.is_spinning:
+            print('already spinning')
+            return
+
+        r = random.random()
+        print(r)
+        if r > 0.8:
+           target = 'G'
+           sendprint()
+        else:
+            target = random.random()
+
+        machine.spin_to(
+                        ['#', 'M', 'A', target, 'A'],
+                        [4,   5.5,    7,  10,      8]
+                    )
+
     # Event loop
     clock = pygame.time.Clock()
     while True:
@@ -240,6 +279,8 @@ def main(fullscreen=False):
         elapsed_s = elapsed_ms / 1000.0        
 
         # HANDLE EVENTS
+        if button.query():
+            spin()
         for event in pygame.event.get():
             if event.type == QUIT:
                 return
@@ -249,10 +290,7 @@ def main(fullscreen=False):
                     return
 
                 if event.key == pygame.K_DOWN:
-                    machine.spin_to(
-                        ['#', 'M', 'A', random.random(), 'A'],
-                        [0,   0,    0,  12,               9]
-                    )
+                    spin()
 
         # TICK ALL OBJECTS
         machine.update(elapsed_s)
@@ -260,11 +298,17 @@ def main(fullscreen=False):
         # DRAW        
         screen.blit(background, (0, 0))
         machine.draw(screen)
-        screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 0, 0))
+
+        if fps:
+            screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 0, 0))
 
         
         pygame.display.flip()
 
 
 if __name__ == '__main__': 
-    main()
+    button.setup()
+    try:
+        main()
+    finally:
+        button.cleanup()
