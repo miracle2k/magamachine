@@ -167,7 +167,7 @@ class SlotMachine(object):
         self.desired_spin_distances = total_slots_to_spin    
 
     def update(self, time):
-        was_spinning = this.is_spinning
+        was_spinning = self.is_spinning
 
         for idx, reel in enumerate(self.reels):
             max_allowed = self.desired_spin_distances[idx]
@@ -214,10 +214,10 @@ def create_letters(font):
 @click.option('--fullscreen', is_flag=True)
 @click.option('--fps', is_flag=True)
 @click.option('--size')
-@click.option('--threshold', type=float)
+@click.option('--threshold', type=float, default=0.15)
 @click.option('--picfile', default=os.path.join(os.path.dirname(__file__), 'trump800.jpg'))
 @click.option('--printer-mac', default="C4:30:18:35:13:FA")
-def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None, threshold=0.15):
+def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None, threshold=None):
     print('- Picfile: %s' % picfile)
     assert os.path.exists(picfile)
 
@@ -253,7 +253,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
 
     def handle_spin_end():
         print('Spinning is done.')
-        buttons.set_led(True)
+        button.set_led(True)
     machine.on_spin_end = handle_spin_end
 
     def sendprint():
@@ -272,17 +272,21 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         r = random.random()
         print('Dice is ', r, 'threshold is', threshold)
         if r < threshold:
-           target = 'G'
-           sendprint()
+            print('ITS A WIN!!!')
+            target = 'G'
+            sendprint()
         else:
             target = random.random()
 
-        buttons.set_led(False)
+        button.set_led(False)
         machine.spin_to(
             ['#', 'M', 'A', target, 'A'],
             [4,   5.5,    7,  10,      8]
         )
 
+
+    # Init LED
+    button.set_led(True)
 
     # Event loop
     clock = pygame.time.Clock()
