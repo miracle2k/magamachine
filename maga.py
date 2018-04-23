@@ -128,6 +128,7 @@ class SlotMachine(object):
         machine_rect.center = screen_rect.center
         self.rect = machine_rect
         self.surface = pygame.Surface((machine_rect.width, machine_rect.height))
+        self.surface.set_alpha(170)
 
         for reel in self.reels:
             reel.layout(self.rect)
@@ -197,6 +198,7 @@ def create_letters(font):
     letters = []
     for x in itertools.chain(LETTERS,  ['#']):
         surface = font.render(x, 1, (10, 10, 10))
+        surface.set_alpha(255)
         letters.append(surface)
         rendered_symbols.add(x, surface)
 
@@ -251,9 +253,15 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     machine.set_to('#MAGA')
     machine.layout(background.get_rect())
 
+    reel_sound = pygame.mixer.Sound('bg2.wav')
+    reel_sound.set_volume(0.3)
+    killers = pygame.mixer.Sound('killers.wav')
+    bg_image = pygame.image.load('bg.jpg')
+
     def handle_spin_end():
         print('Spinning is done.')
         button.set_led(True)
+        reel_sound.fadeout(1000)
     machine.on_spin_end = handle_spin_end
 
     def sendprint():
@@ -268,6 +276,9 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         if machine.is_spinning:
             print('already spinning')
             return
+
+        reel_sound.play()
+        killers.play()
 
         r = random.random()
         print('Dice is ', r, 'threshold is', threshold)
@@ -313,6 +324,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
 
         # DRAW        
         screen.blit(background, (0, 0))
+        screen.blit(bg_image, (0, 0))
         machine.draw(screen)
 
         if fps:
