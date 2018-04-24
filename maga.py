@@ -232,7 +232,9 @@ def load_spin_effects():
 @click.option('--threshold', type=float, default=0.15)
 @click.option('--picfile', default=getfilepath('trump800.jpg'))
 @click.option('--printer-mac', default="C4:30:18:35:13:FA")
-def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None, threshold=None):
+@click.option('--speedup', type=int, default=2)
+@click.option('--reelspeed', type=int, default=9)
+def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None, threshold=None, speedup=None, reelspeed=None):
     print('- Picfile: %s' % picfile)
     assert os.path.exists(picfile)    
 
@@ -259,7 +261,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     padding = 0.1
     symbol_width = int(symbol_width + padding * symbol_width)
 
-    machine = SlotMachine(symbol_height, symbol_width)
+    machine = SlotMachine(symbol_height, symbol_width, speed=reelspeed)
     machine.add_reel(symbols=LETTERS + ['#'])
     machine.add_reel()
     machine.add_reel()
@@ -308,7 +310,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         button.set_led(False)
         machine.spin_to(
             ['#', 'M', 'A', target, 'A'],
-            [4,   5.5,    7,  10,      8]
+            [4/speedup,   5.5/speedup,    7/speedup,  11/speedup,      8/speedup]
         )
 
 
