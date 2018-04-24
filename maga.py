@@ -2,6 +2,7 @@ import click
 import subprocess
 import pygame
 import glob
+from datetime import datetime, timedelta
 import button
 import math
 import random
@@ -228,6 +229,27 @@ def load_spin_effects():
     return effects
 
 
+class Callbacks:
+    def __init__(self):
+        self.list = []
+
+    def schedule(self, from_now_seconds, callback):
+        dt = datetime.utcnow() + timedelta(seconds=from_now_seconds)
+        self.list.append((dt, callback))
+
+    def handle(self):
+        l = self.list[::]
+        now = datetime.utcnow()
+        to_remove = set()
+        for item in l:
+            dt, callback = item
+            if dt < now:
+                callback()
+                to_remove.add(item)
+        self.list = list(set(self.list) - to_remove)
+
+
+
 @click.command()
 @click.option('--fullscreen', is_flag=True)
 @click.option('--fps', is_flag=True)
@@ -259,6 +281,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     
     font = pygame.font.Font("./bender_bold.ttf", size or 220)
     fontSmall = pygame.font.Font(None, 33)
+    fontPrompt = pygame.font.Font("./avenir.ttf", 70)    
 
     symbol_width, symbol_height = create_letters(font)
     padding = 0.1
@@ -277,10 +300,41 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     reel_sound.set_volume(0.15)
     bg_image = pygame.image.load('bg.jpg')
 
-    def handle_spin_end():
-        print('Spinning is done.')
+    callbacks = Callbacks()
+
+    CURRENT_GAME = dict()
+    def stop_current_game():
+        for x in CURRENT_GAME.copy():
+            del CURRENT_GAME[x]
+
+    def start_current_game(**kw):
+        for x in CURRENT_GAME.copy():
+            del CURRENT_GAME[x]
+        CURRENT_GAME['on'] = True
+        CURRENT_GAME.update(kw)
+
+
+    def end_game():        
+        print('Game ended')
+        stop_current_game()
         button.set_led(True)
+
+
+    def handle_spin_end():        
+        print('Spinning is done.')
+        
         reel_sound.fadeout(1000)
+        
+        if CURRENT_GAME.get('win'):
+            CURRENT_GAME['final'] = True
+
+            def cb():
+                end_game()
+            callbacks.schedule(10, cb)
+        else:
+            end_game()
+        
+
     machine.on_spin_end = handle_spin_end
 
     def sendprint():
@@ -295,6 +349,9 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         if machine.is_spinning:
             print('already spinning')
             return
+        if CURRENT_GAME.get('on', False):
+            print('have an active game')
+            return
 
         r = random.random()
 
@@ -303,17 +360,21 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
 
         
         print('Dice is ', r, 'threshold is', threshold)
+        extra_time_for_g = 0
         if r < threshold:
             print('ITS A WIN!!!')
             target = 'G'
+            extra_time_for_g = 3
+            start_current_game(win=True)
             sendprint()
         else:
+            start_current_game(win=False)
             target = random.random()
 
         button.set_led(False)
         machine.spin_to(
             ['#', 'M', 'A', target, 'A'],
-            [4/speedup,   5.5/speedup,    7/speedup,  11/speedup,      8/speedup]
+            [4/speedup,   5.5/speedup,    7/speedup,  10/speedup + extra_time_for_g,      8/speedup]
         )
 
 
@@ -326,7 +387,9 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     screen.blit(bg_image, (0, 0))
     while True:
         elapsed_ms = clock.tick(120)
-        elapsed_s = elapsed_ms / 1000.0        
+        elapsed_s = elapsed_ms / 1000.0
+
+        callbacks.handle()
 
         # HANDLE EVENTS
         if button.query():
@@ -345,17 +408,31 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         # TICK ALL OBJECTS
         machine.update(elapsed_s)
 
-        # DRAW        
-        #screen.blit(background, (0, 0))
-        machine.draw(screen)
+        # DRAW
+        if CURRENT_GAME.get('on') and CURRENT_GAME.get('final'):
+            screen.blit(background, (0, 0))
 
-        if fps:
-            pygame.draw.rect(screen, (255,255,255), pygame.Rect(0, 0, 200, 50))
-            screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 200, 50))
-            #pygame.display.update(pygame.Rect(0, 0, 200, 50))
+            # Show america great again as a text?
+            machine.draw(screen)
 
-        pygame.display.update(pygame.Rect(0, 0, 200, 50))
-        #pygame.display.flip()
+            prompt = fontPrompt.render('You win! Please wait for your price, and do not pull the hair.', 1, (10, 10, 10))
+            promptRect = prompt.get_rect()
+            promptRect.center = screen.get_rect().center
+            promptRect.top += 200
+            screen.blit(prompt, promptRect)
+
+        else:
+            #screen.blit(background, (0, 0))
+            screen.blit(bg_image, (0, 0))
+            machine.draw(screen)
+
+            if fps:
+                pygame.draw.rect(screen, (255,255,255), pygame.Rect(0, 0, 200, 50))
+                screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 200, 50))
+                #pygame.display.update(pygame.Rect(0, 0, 200, 50))
+
+        #pygame.display.update(pygame.Rect(0, 0, 200, 50))
+        pygame.display.flip()
 
 
 if __name__ == '__main__': 
