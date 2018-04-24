@@ -98,7 +98,7 @@ class Reel():
                 - remainder * self.machine.symbol_height
             )
             
-            target.blit(letter_surface, font_rect)
+            target.blit(letter_surface, font_rect)    
 
 
 class SlotMachine(object):
@@ -189,7 +189,9 @@ class SlotMachine(object):
                 self.on_spin_end()
 
     def draw(self, target):
-        self.surface.fill((255,255,255))
+        #self.surface.fill((233,0,255))
+        #self.surface.fill((187,19,62))
+        self.surface.fill((223,223,223))
 
         for reel in self.reels:
             # we could use clamp here
@@ -297,8 +299,10 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     machine.layout(background.get_rect())
 
     reel_sound = pygame.mixer.Sound('bg2.wav')
-    reel_sound.set_volume(0.15)
+    reel_sound.set_volume(0.22)
     bg_image = pygame.image.load('bg.jpg')
+    win_image = pygame.image.load('winimg.jpg')
+    lose_sound = pygame.mixer.Sound('lose1.wav')
 
     callbacks = Callbacks()
 
@@ -332,6 +336,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
                 end_game()
             callbacks.schedule(10, cb)
         else:
+            lose_sound.play()
             end_game()
         
 
@@ -377,7 +382,6 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
             [4/speedup,   5.5/speedup,    7/speedup,  10/speedup + extra_time_for_g,      8/speedup]
         )
 
-
     # Init LED
     button.set_led(True)
 
@@ -385,6 +389,8 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     clock = pygame.time.Clock()
 
     screen.blit(bg_image, (0, 0))
+
+    refresh_bg = False
     while True:
         elapsed_ms = clock.tick(120)
         elapsed_s = elapsed_ms / 1000.0
@@ -410,26 +416,34 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
 
         # DRAW
         if CURRENT_GAME.get('on') and CURRENT_GAME.get('final'):
+            refresh_bg = True
             screen.blit(background, (0, 0))
 
             # Show america great again as a text?
-            machine.draw(screen)
+            screen.blit(win_image, (machine.rect.left, machine.rect.top))
 
-            prompt = fontPrompt.render('You win! Please wait for your price, and do not pull the hair.', 1, (10, 10, 10))
-            promptRect = prompt.get_rect()
+            prompt1 = fontPrompt.render('Please wait for your prize to print (about 15 seconds).', 1, (10, 10, 10))
+            promptRect = prompt1.get_rect()
             promptRect.center = screen.get_rect().center
             promptRect.top += 200
-            screen.blit(prompt, promptRect)
+            screen.blit(prompt1, promptRect)
 
+            prompt2 = fontPrompt.render('Do not pull the paper during printing.', 1, (10, 10, 10))
+            promptRect = prompt2.get_rect()
+            promptRect.center = screen.get_rect().center
+            promptRect.top += 280
+            screen.blit(prompt2, promptRect)
         else:
-            #screen.blit(background, (0, 0))
-            screen.blit(bg_image, (0, 0))
+            if refresh_bg:
+                screen.blit(bg_image, (0, 0))
+                refresh_bg = False
+
             machine.draw(screen)
 
-            if fps:
-                pygame.draw.rect(screen, (255,255,255), pygame.Rect(0, 0, 200, 50))
-                screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 200, 50))
-                #pygame.display.update(pygame.Rect(0, 0, 200, 50))
+        if fps:
+            pygame.draw.rect(screen, (255,255,255), pygame.Rect(0, 0, 200, 50))
+            screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 200, 50))
+            #pygame.display.update(pygame.Rect(0, 0, 200, 50))
 
         #pygame.display.update(pygame.Rect(0, 0, 200, 50))
         pygame.display.flip()
