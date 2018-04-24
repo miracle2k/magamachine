@@ -1,6 +1,7 @@
 import click
 import subprocess
 import pygame
+import glob
 import button
 import math
 import random
@@ -212,16 +213,28 @@ def create_letters(font):
     return max_width, max_height
 
 
+def getfilepath(filename):
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), filename)
+
+
+def load_spin_effects():
+    effects = []
+    for file in glob.glob(getfilepath('wav/*')):
+        print "Loading effect", getfilepath(file)
+        effects.append(pygame.mixer.Sound(getfilepath(file)))
+    return effects
+
+
 @click.command()
 @click.option('--fullscreen', is_flag=True)
 @click.option('--fps', is_flag=True)
 @click.option('--size')
 @click.option('--threshold', type=float, default=0.15)
-@click.option('--picfile', default=os.path.join(os.path.dirname(__file__), 'trump800.jpg'))
+@click.option('--picfile', default=getfilepath('trump800.jpg'))
 @click.option('--printer-mac', default="C4:30:18:35:13:FA")
 def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None, threshold=None):
     print('- Picfile: %s' % picfile)
-    assert os.path.exists(picfile)
+    assert os.path.exists(picfile)    
 
     # Initialise screen
     pygame.init()
@@ -231,6 +244,8 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     pygame.mouse.set_visible(False)
     screen = pygame.display.set_mode((1920, 1080), flags)
     pygame.display.set_caption('#MAGA Machine')
+
+    spin_effects = load_spin_effects()
 
     # Fill background
     background = pygame.Surface(screen.get_size())
@@ -254,8 +269,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     machine.layout(background.get_rect())
 
     reel_sound = pygame.mixer.Sound('bg2.wav')
-    reel_sound.set_volume(0.3)
-    killers = pygame.mixer.Sound('killers.wav')
+    reel_sound.set_volume(0.15)
     bg_image = pygame.image.load('bg.jpg')
 
     def handle_spin_end():
@@ -277,10 +291,12 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
             print('already spinning')
             return
 
-        reel_sound.play()
-        killers.play()
-
         r = random.random()
+
+        reel_sound.play()
+        spin_effects[int(r*len(spin_effects)-1)].play()
+
+        
         print('Dice is ', r, 'threshold is', threshold)
         if r < threshold:
             print('ITS A WIN!!!')
