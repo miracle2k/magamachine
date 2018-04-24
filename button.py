@@ -5,7 +5,7 @@ except ImportError:
 import time
 
 
-LED_PIN = 5
+LED_PIN = 2
 BUTTON_PIN = 23
 
 def setup():
