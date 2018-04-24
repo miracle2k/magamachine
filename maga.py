@@ -132,7 +132,7 @@ class SlotMachine(object):
         machine_rect.center = screen_rect.center
         self.rect = machine_rect
         self.surface = pygame.Surface((machine_rect.width, machine_rect.height))
-        self.surface.set_alpha(170)
+        #self.surface.set_alpha(170)
 
         for reel in self.reels:
             reel.layout(self.rect)
@@ -202,7 +202,7 @@ def create_letters(font):
     letters = []
     for x in itertools.chain(LETTERS,  ['#']):
         surface = font.render(x, 1, (10, 10, 10))
-        surface.set_alpha(255)
+        #surface.set_alpha(255)
         letters.append(surface)
         rendered_symbols.add(x, surface)
 
@@ -243,7 +243,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
 
     # Initialise screen
     pygame.init()
-    flags = 0
+    flags = pygame.DOUBLEBUF
     if fullscreen:
         flags |= pygame.FULLSCREEN
     pygame.mouse.set_visible(False)
@@ -258,7 +258,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     background.fill((255, 255, 255))    
     
     font = pygame.font.Font("./bender_bold.ttf", size or 220)
-    fontSmall = pygame.font.Font(None, 13)
+    fontSmall = pygame.font.Font(None, 33)
 
     symbol_width, symbol_height = create_letters(font)
     padding = 0.1
@@ -322,6 +322,8 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
 
     # Event loop
     clock = pygame.time.Clock()
+
+    screen.blit(bg_image, (0, 0))
     while True:
         elapsed_ms = clock.tick(120)
         elapsed_s = elapsed_ms / 1000.0        
@@ -344,15 +346,16 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         machine.update(elapsed_s)
 
         # DRAW        
-        screen.blit(background, (0, 0))
-        screen.blit(bg_image, (0, 0))
+        #screen.blit(background, (0, 0))
         machine.draw(screen)
 
         if fps:
-            screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 0, 0))
+            pygame.draw.rect(screen, (255,255,255), pygame.Rect(0, 0, 200, 50))
+            screen.blit(fontSmall.render('FPS: %s' % clock.get_fps(), 1, (10, 10, 10)), pygame.Rect(0, 0, 200, 50))
+            #pygame.display.update(pygame.Rect(0, 0, 200, 50))
 
-        
-        pygame.display.flip()
+        pygame.display.update(pygame.Rect(0, 0, 200, 50))
+        #pygame.display.flip()
 
 
 if __name__ == '__main__': 
