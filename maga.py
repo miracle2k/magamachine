@@ -55,6 +55,9 @@ class Reel():
         if isinstance(symbol, (float,)):
             symbol_idx = int(symbol * len(self.symbols))
             symbol = self.symbols[symbol_idx]
+            # HACK: Do not allow G
+            if symbol == 'G':
+                symbol = 'H'
         return self.symbols.index(symbol)
 
     def count_from_to(self, start, end):
