@@ -282,6 +282,9 @@ class SurfaceFade:
         self.remaining = seconds
         self.total = seconds
 
+    def reset(self):
+        self.total = 0
+
     def update(self, time):
         if self.total:
             self.remaining -= time
@@ -320,6 +323,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     pygame.display.set_caption('#MAGA Machine')
 
     spin_effects = load_spin_effects()
+    random.shuffle(spin_effects)
 
     # Fill background
     background = pygame.Surface(screen.get_size())
@@ -347,8 +351,9 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     reel_sound.set_volume(0.22)
     bg_image = pygame.image.load('bg.jpg')
     bg_surface = SurfaceFade(bg_image, screen.get_rect())
-    win_image = pygame.image.load('winimg.jpg')
-    lose_sound = pygame.mixer.Sound('lose1.wav')
+    win_image = pygame.image.load(getfilepath('winimg.jpg'))
+    lose_sound = pygame.mixer.Sound(getfilepath('lose1.wav'))
+    win_sound = pygame.mixer.Sound(getfilepath('win2.wav'))
 
     callbacks = Callbacks()
 
@@ -368,6 +373,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         print('Game ended')
         stop_current_game()
         machine.bg_color = MACHINEBG
+        bg_surface.reset()
         button.set_led(True)
 
 
@@ -380,10 +386,13 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
             CURRENT_GAME['final'] = True
             bg_surface.start(3)
             machine.bg_color = (255,255,255)
-
+            win_sound.play()    
             def cb():
                 end_game()
             callbacks.schedule(16, cb)
+            def cb2():
+                CURRENT_GAME['prompt'] = True
+            callbacks.schedule(5, cb2)
         else:
             lose_sound.play()
             end_game()
@@ -410,7 +419,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         r = random.random()
 
         reel_sound.play()
-        spin_effects[int(r*len(spin_effects)-1)].play()
+        spin_effects[int(r*len(spin_effects))].play()
 
         
         print('Dice is ', r, 'threshold is', threshold)
@@ -474,19 +483,21 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
             #screen.blit(win_image, (machine.rect.left, machine.rect.top))
             machine.draw(screen)
 
-            prompt1 = fontPrompt.render('Please wait for your prize to print (about 15 seconds).', 1, (10, 10, 10))
-            promptRect = prompt1.get_rect()
-            promptRect.center = screen.get_rect().center
-            promptRect.top += 200
-            screen.blit(prompt1, promptRect)
+            if CURRENT_GAME.get('prompt'):
+                prompt1 = fontPrompt.render('Please wait for your prize to print (about 15 seconds).', 1, (120, 120, 120))
+                promptRect = prompt1.get_rect()
+                promptRect.center = screen.get_rect().center
+                promptRect.top += 200
+                screen.blit(prompt1, promptRect)
 
-            prompt2 = fontPrompt.render('Do not pull the paper during printing.', 1, (10, 10, 10))
-            promptRect = prompt2.get_rect()
-            promptRect.center = screen.get_rect().center
-            promptRect.top += 280
-            screen.blit(prompt2, promptRect)
+                prompt2 = fontPrompt.render('Do not pull the paper during printing.', 1, (120, 120, 120))
+                promptRect = prompt2.get_rect()
+                promptRect.center = screen.get_rect().center
+                promptRect.top += 280
+                screen.blit(prompt2, promptRect)
         else:
             if refresh_bg:
+                bg_image.set_alpha(255)
                 screen.blit(bg_image, (0, 0))
                 refresh_bg = False
 
