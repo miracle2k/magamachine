@@ -101,6 +101,9 @@ class Reel():
             target.blit(letter_surface, font_rect)    
 
 
+MACHINEBG = (223,223,223)
+
+
 class SlotMachine(object):
 
     def __init__(self, symbol_height, symbol_width, speed=9):
@@ -108,6 +111,7 @@ class SlotMachine(object):
         self.symbol_height = symbol_height
         self.reels = []
         self.speed = speed
+        self.bg_color = MACHINEBG
 
         self.on_spin_end = None
 
@@ -191,7 +195,7 @@ class SlotMachine(object):
     def draw(self, target):
         #self.surface.fill((233,0,255))
         #self.surface.fill((187,19,62))
-        self.surface.fill((223,223,223))
+        self.surface.fill(self.bg_color)
 
         for reel in self.reels:
             # we could use clamp here
@@ -251,6 +255,47 @@ class Callbacks:
         self.list = list(set(self.list) - to_remove)
 
 
+class SurfaceFade:
+    def __init__(self, surface, rect):
+        self.rect = rect
+        self.surface = surface
+        self.remaining = 0
+        self.total = 0
+
+    def update(self, time):
+        was_spinning = self.is_spinning
+
+        for idx, reel in enumerate(self.reels):
+            max_allowed = self.desired_spin_distances[idx]
+            to_spin = min(max_allowed, self.speed * time)
+
+            reel.position += to_spin
+
+            reel.position = reel.norm_idx(reel.position)
+            self.desired_spin_distances[idx] -= to_spin
+
+        if was_spinning and not self.is_spinning:
+            if self.on_spin_end:
+                self.on_spin_end()
+                
+    def start(self, seconds):
+        self.remaining = seconds
+        self.total = seconds
+
+    def update(self, time):
+        if self.total:
+            self.remaining -= time
+            if self.remaining < 0:
+                self.remaining = 0
+
+    def draw(self, target):
+        if not self.total:
+            alpha = 255
+        else:
+            alpha = ((self.remaining / self.total)) * 255
+        self.surface.set_alpha(alpha)
+        target.blit(self.surface, (0, 0))
+
 
 @click.command()
 @click.option('--fullscreen', is_flag=True)
@@ -301,6 +346,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     reel_sound = pygame.mixer.Sound('bg2.wav')
     reel_sound.set_volume(0.22)
     bg_image = pygame.image.load('bg.jpg')
+    bg_surface = SurfaceFade(bg_image, screen.get_rect())
     win_image = pygame.image.load('winimg.jpg')
     lose_sound = pygame.mixer.Sound('lose1.wav')
 
@@ -321,6 +367,7 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     def end_game():        
         print('Game ended')
         stop_current_game()
+        machine.bg_color = MACHINEBG
         button.set_led(True)
 
 
@@ -331,10 +378,12 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
         
         if CURRENT_GAME.get('win'):
             CURRENT_GAME['final'] = True
+            bg_surface.start(3)
+            machine.bg_color = (255,255,255)
 
             def cb():
                 end_game()
-            callbacks.schedule(10, cb)
+            callbacks.schedule(16, cb)
         else:
             lose_sound.play()
             end_game()
@@ -413,14 +462,17 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
 
         # TICK ALL OBJECTS
         machine.update(elapsed_s)
+        bg_surface.update(elapsed_s)
 
         # DRAW
         if CURRENT_GAME.get('on') and CURRENT_GAME.get('final'):
-            refresh_bg = True
+            refresh_bg = True            
             screen.blit(background, (0, 0))
+            bg_surface.draw(screen)
 
             # Show america great again as a text?
-            screen.blit(win_image, (machine.rect.left, machine.rect.top))
+            #screen.blit(win_image, (machine.rect.left, machine.rect.top))
+            machine.draw(screen)
 
             prompt1 = fontPrompt.render('Please wait for your prize to print (about 15 seconds).', 1, (10, 10, 10))
             promptRect = prompt1.get_rect()
