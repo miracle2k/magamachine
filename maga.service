@@ -1,0 +1,16 @@
+[Unit]
+Description=MAGA SERVICE
+After=multi-user.target
+
+[Service]
+Restart=always
+Type=simple
+Environment=XAUTHORITY=/home/pi/.Xauthority
+Environment=XDG_SESSION_PATH=/org/freedesktop/DisplayManager/Session0
+Environment=DISPLAY=:0.0
+RestartSec=30
+ExecStart=/usr/bin/python /home/pi/Desktop/magamachine/maga.py --fullscreen --speedup 3 --threshold 0.2
+
+
+[Install]
+WantedBy=multi-user.target
