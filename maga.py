@@ -330,9 +330,9 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     background = background.convert()
     background.fill((255, 255, 255))    
     
-    font = pygame.font.Font("./bender_bold.ttf", size or 220)
+    font = pygame.font.Font(getfilepath("./bender_bold.ttf"), size or 220)
     fontSmall = pygame.font.Font(None, 33)
-    fontPrompt = pygame.font.Font("./avenir.ttf", 70)    
+    fontPrompt = pygame.font.Font(getfilepath("./avenir.ttf"), 70)    
 
     symbol_width, symbol_height = create_letters(font)
     padding = 0.1
@@ -347,9 +347,9 @@ def main(fullscreen=False, fps=False, size=None, picfile=None, printer_mac=None,
     machine.set_to('#MAGA')
     machine.layout(background.get_rect())
 
-    reel_sound = pygame.mixer.Sound('bg2.wav')
-    reel_sound.set_volume(0.22)
-    bg_image = pygame.image.load('bg.jpg')
+    reel_sound = pygame.mixer.Sound(getfilepath('bg2loud.wav'))
+    reel_sound.set_volume(0.35)
+    bg_image = pygame.image.load(getfilepath('bg.jpg'))
     bg_surface = SurfaceFade(bg_image, screen.get_rect())
     win_image = pygame.image.load(getfilepath('winimg.jpg'))
     lose_sound = pygame.mixer.Sound(getfilepath('lose1.wav'))
